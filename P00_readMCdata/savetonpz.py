@@ -7,12 +7,14 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-17 14:05:42
+# Last Modified: 2022-06-17 16:00:35
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
 # Date      	By      	Comments
 # ----------	--------	----------------------------------------------------
+# 2022-06-17	K.Y.Hu		add indices in npz of each event
+# 2022-06-17	K.Y.Hu		fix bug of exchange 2 line of numpy
 # 2022-06-16	K.Y.Hu		finsh method
 # 2022-06-16	K.Y.Hu		add save to numpy method
 # 2022-06-15	K.Y.Hu		Create file
@@ -83,11 +85,15 @@ class Data(object):
         # number of fire detector,
         # number of photons, time
         self.Tibet = np.zeros([99869316, 4])
+        # store the location of event
+        self.Tibetevent = np.zeros(6225474, dtype=int)
         # with 3 element,
         # number of event,
         # number of fire detector,
         # Number of photons arriving at pmt
         self.MD = np.zeros([76451312, 3])
+        # store the location of event
+        self.MDevent = np.zeros(6225474, dtype=int)
         self.count = 0
         self.Tibetcount = 0
         self.MDcount = 0
@@ -99,7 +105,8 @@ class Data(object):
             trigger (One_trigger): read data for one event
         """
         self.pri[self.count] = trigger.pri_numpy
-
+        self.Tibetevent[self.count] = self.Tibetcount
+        self.MDevent[self.count] = self.MDcount
         order = np.where(trigger.prtcl != 0)[0]
         for i in order:
             self.Tibet[self.Tibetcount] = np.array(
@@ -121,10 +128,15 @@ class Data(object):
             savepath (str): path to save
         """
         # np.savez_compressed(savepath, pri=self.pri, Tibet=self.Tibet, MDevent=self.MD)
-        np.savez(savepath, pri=self.pri, Tibet=self.Tibet, MD=self.MD)
+        np.savez(savepath,
+                 pri=self.pri,
+                 Tibetevent=self.Tibetevent,
+                 Tibet=self.Tibet,
+                 MDevent=self.MDevent,
+                 MD=self.MD)
 
 
-# @send_to_wecom_after_finish
+@send_to_wecom_after_finish
 def savetonpz(originpath: str, savepath: str):
     """resave data to npz file
 
@@ -140,16 +152,15 @@ def savetonpz(originpath: str, savepath: str):
 
     data_numpy = Data()
     with gzip.open(originpath, 'rb') as data_file:
-        # while (1):
-        for i in range(1):
+        while (1):
             buf = data_file.read(output_struct.size)
             if len(buf) != output_struct.size:
                 break
             trigger = One_trigger(buf, output_struct)
             data_numpy.addevent(trigger)
-    # data_numpy.save(savepath)
+    data_numpy.save(savepath)
     print(f'用时：{datetime.timedelta(seconds=time.time() - start_time)}')  # 15-20 min
-    # return f'save in {savepath} success!'
+    return f'save in {savepath} success!'
 
 
 if __name__ == '__main__':
