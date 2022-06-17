@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-16 20:03:15
+# Last Modified: 2022-06-17 14:05:42
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -66,7 +66,7 @@ class One_trigger(object):
             i (int): first order for switch
             j (int): second order for switch
         """
-        self.photon[:, i, :], self.photon[:, j, :] = self.photon[:, j, :], self.photon[:, i, :]
+        self.photon[:, [i, j], :] = self.photon[:, [j, i], :]
 
 
 class Data(object):
@@ -124,7 +124,7 @@ class Data(object):
         np.savez(savepath, pri=self.pri, Tibet=self.Tibet, MD=self.MD)
 
 
-@send_to_wecom_after_finish
+# @send_to_wecom_after_finish
 def savetonpz(originpath: str, savepath: str):
     """resave data to npz file
 
@@ -140,15 +140,16 @@ def savetonpz(originpath: str, savepath: str):
 
     data_numpy = Data()
     with gzip.open(originpath, 'rb') as data_file:
-        while (1):
+        # while (1):
+        for i in range(1):
             buf = data_file.read(output_struct.size)
             if len(buf) != output_struct.size:
                 break
             trigger = One_trigger(buf, output_struct)
             data_numpy.addevent(trigger)
-    data_numpy.save(savepath)
+    # data_numpy.save(savepath)
     print(f'用时：{datetime.timedelta(seconds=time.time() - start_time)}')  # 15-20 min
-    return f'save in {savepath} success!'
+    # return f'save in {savepath} success!'
 
 
 if __name__ == '__main__':
