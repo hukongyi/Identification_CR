@@ -7,12 +7,13 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-17 16:00:35
+# Last Modified: 2022-06-17 16:31:55
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
 # Date      	By      	Comments
 # ----------	--------	----------------------------------------------------
+# 2022-06-17	K.Y.Hu		change save format
 # 2022-06-17	K.Y.Hu		add indices in npz of each event
 # 2022-06-17	K.Y.Hu		fix bug of exchange 2 line of numpy
 # 2022-06-16	K.Y.Hu		finsh method
@@ -121,28 +122,70 @@ class Data(object):
 
         self.count += 1
 
-    def save(self, savepath: str):
+    def save(self, savepath: str, compressed: bool = False):
         """save to savepath with npz
 
         Args:
             savepath (str): path to save
+            compressed (bool): save with savez or savez_compressed
         """
         # np.savez_compressed(savepath, pri=self.pri, Tibet=self.Tibet, MDevent=self.MD)
-        np.savez(savepath,
-                 pri=self.pri,
-                 Tibetevent=self.Tibetevent,
-                 Tibet=self.Tibet,
-                 MDevent=self.MDevent,
-                 MD=self.MD)
+        pri_e_num = self.pri[:, 0].astype(int)
+        pri_id = self.pri[:, 2].astype(int)
+        pri_e = self.pri[:, 3]
+        pri_theta = self.pri[:, 4]
+        pri_phi = self.pri[:, 5]
+        pri_ne = self.pri[:, 6].astype(int)
+        pri_core_x = self.pri[:, 7]
+        pri_core_y = self.pri[:, 8]
+        pri_sump = self.pri[:, 9]
+        pri_n_hit = self.pri[:, 10].astype(int)
+        if compressed:
+            np.savez_compressed(
+                savepath,
+                # pri=self.pri,
+                pri_e_num=pri_e_num,
+                pri_id=pri_id,
+                pri_e=pri_e,
+                pri_theta=pri_theta,
+                pri_phi=pri_phi,
+                pri_ne=pri_ne,
+                pri_core_x=pri_core_x,
+                pri_core_y=pri_core_y,
+                pri_sump=pri_sump,
+                pri_n_hit=pri_n_hit,
+                Tibetevent=self.Tibetevent,
+                Tibet=self.Tibet,
+                MDevent=self.MDevent,
+                MD=self.MD)
+        else:
+            np.savez(
+                savepath,
+                # pri=self.pri,
+                pri_e_num=pri_e_num,
+                pri_id=pri_id,
+                pri_e=pri_e,
+                pri_theta=pri_theta,
+                pri_phi=pri_phi,
+                pri_ne=pri_ne,
+                pri_core_x=pri_core_x,
+                pri_core_y=pri_core_y,
+                pri_sump=pri_sump,
+                pri_n_hit=pri_n_hit,
+                Tibetevent=self.Tibetevent,
+                Tibet=self.Tibet,
+                MDevent=self.MDevent,
+                MD=self.MD)
 
 
 @send_to_wecom_after_finish
-def savetonpz(originpath: str, savepath: str):
+def savetonpz(originpath: str, savepath: str, compressed: bool = False):
     """resave data to npz file
 
     Args:
         originpath (str): data path to read
         savepath (str): path to save
+        compressed (bool): save with savez or savez_compressed
 
     Returns:
         str: messgae to send to wecom
@@ -158,7 +201,7 @@ def savetonpz(originpath: str, savepath: str):
                 break
             trigger = One_trigger(buf, output_struct)
             data_numpy.addevent(trigger)
-    data_numpy.save(savepath)
+    data_numpy.save(savepath, compressed)
     print(f'用时：{datetime.timedelta(seconds=time.time() - start_time)}')  # 15-20 min
     return f'save in {savepath} success!'
 
