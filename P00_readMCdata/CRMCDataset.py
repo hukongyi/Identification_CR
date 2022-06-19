@@ -7,24 +7,26 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-18 15:58:01
+# Last Modified: 2022-06-19 16:50:05
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
 # Date      	By      	Comments
 # ----------	--------	----------------------------------------------------
+# 2022-06-19	K.Y.Hu		realize should not use InMemoryDataset
 # 2022-06-16	K.Y.Hu		Create this file
 ###
 import os.path as osp
 from typing import Callable, Optional
 
 import torch
-from torch_geometric.data import InMemoryDataset, Data
+from torch_geometric.data import Data, Dataset
 import numpy as np
 from tqdm import tqdm
 
 
-class CRMCDataset(InMemoryDataset):
+# can not use InMemoryDataset, need Dataset
+class CRMCDataset(Dataset):
 
     def __init__(self,
                  root: str,
@@ -42,6 +44,7 @@ class CRMCDataset(InMemoryDataset):
         self.x_range = x_range
         self.y_range = y_range
         self.calibfile = calibfile
+        self.len = 0
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -62,7 +65,7 @@ class CRMCDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self) -> str:
-        return 'data.pt'
+        return [f'data_{i}.pt' for i in range(self.len)]
 
     def download(self):
         pass
@@ -82,7 +85,6 @@ class CRMCDataset(InMemoryDataset):
         loc_y = np.array(loc_y)
         loc_z = np.array(loc_z)
 
-        data_list = list()
         orgin_data = np.load(self.raw_paths[0])
 
         # pri_e_num = orgin_data['pri_e_num']
@@ -128,16 +130,23 @@ class CRMCDataset(InMemoryDataset):
                     pri_sump=pri_sump,
                 )
                 if self.pre_filter(data, self.nchmin, self.x_range, self.y_range):
-                    data_list.append(data)
-
+                    torch.save(data, osp.join(self.processed_dir, f'data_{self.len}.pt'))
+                    self.len += 1
         # if self.pre_filter is not None:
         #     data_list = [data for data in data_list if self.pre_filter(data)]
 
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
+        # if self.pre_transform is not None:
+        #     data_list = [self.pre_transform(data) for data in data_list]
 
-        data, slices = self.collate([data_list])
-        torch.save((data, slices), self.processed_paths[0])
+        # data, slices = self.collate(data_list)
+        # torch.save((data, slices), self.processed_paths[0])
+
+    def len(self):
+        return self.len
+
+    def get(self, idx):
+        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
+        return data
 
 
 def pre_filter(data, nchmin, x_range, y_range):
@@ -215,10 +224,12 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
 
 
 if __name__ == '__main__':
-    CRMCDataset(root="/home/hky/github/Identification_CR/data",
-                calibfile="/home/hky/for_mengy3/src16_1.8/userfile/mccaliblmzhai_20190312.cal",
-                kneighbors=8,
-                nchmin=16,
-                x_range=100,
-                y_range=100,
-                pre_filter=pre_filter)
+    dataset = CRMCDataset(
+        root="/home/hky/github/Identification_CR/data",
+        calibfile="/home/hky/for_mengy3/src16_1.8/userfile/mccaliblmzhai_20190312.cal",
+        kneighbors=8,
+        nchmin=16,
+        x_range=100,
+        y_range=100,
+        pre_filter=pre_filter)
+    print(dataset[0])
