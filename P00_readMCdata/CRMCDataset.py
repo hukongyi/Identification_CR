@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-20 14:58:55
+# Last Modified: 2022-06-20 16:13:32
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -39,24 +39,21 @@ class CRMCDataset(Dataset):
                  transform: Optional[Callable] = None,
                  pre_transform: Optional[Callable] = None,
                  pre_filter: Optional[Callable] = None):
+        self.root = root
         self.kneighbors = kneighbors
         self.nchmin = nchmin
         self.calibfile = calibfile
         self.x_range = x_range
         self.y_range = y_range
-        processed_dir = osp.join(
-            root,
-            f'processed_kneighbors_{self.kneighbors}_nchmin_{self.nchmin}_{self.x_range}_{self.y_range}'
-        )
-        len_path = osp.join(processed_dir, 'len')
-        if not osp.exists(len_path):
+        data_number_path = osp.join(self.processed_dir, 'data_number')
+        if not osp.exists(data_number_path):
             self.number = 0
         else:
-            with open(len_path, 'r') as f:
+            with open(data_number_path, 'r') as f:
                 self.number = int(f.read())
         super().__init__(root, transform, pre_transform, pre_filter)
-        if not osp.exists(len_path):
-            with open(len_path, 'w') as f:
+        if not osp.exists(data_number_path):
+            with open(data_number_path, 'w') as f:
                 f.write(str(self.number))
 
     @property
@@ -115,9 +112,18 @@ class CRMCDataset(Dataset):
 
         particle_id = list(set(pri_id))
         particle_id.sort()
-
+        pri_kind = np.zeros(len(pri_id), dtype=np.int)
         for j, i in enumerate(particle_id):
-            pri_id[pri_id == i] = j
+            if j == 0 or j == 1:
+                pri_kind[pri_id == i] = 0
+            elif j == 11:
+                pri_kind[pri_id == i] = 2
+            else:
+                pri_kind[pri_id == i] = 1
+
+        print(len(pri_kind[pri_kind == 0]))
+        print(len(pri_kind[pri_kind == 1]))
+        print(len(pri_kind[pri_kind == 2]))
 
         for i in tqdm(range(len(pri_id))):
             if pri_n_hit[i] >= self.nchmin:
@@ -139,7 +145,7 @@ class CRMCDataset(Dataset):
                     pri_e=pri_e,
                     pri_ne=pri_ne,
                     pri_sump=pri_sump,
-                    y=pri_id,
+                    y=pri_kind,
                 )
                 if self.pre_filter(data, self.nchmin, self.x_range, self.y_range):
                     torch.save(data, osp.join(self.processed_dir, f'data_{self.number}.pt'))
@@ -218,7 +224,7 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
     data = Data(
         x=torch.tensor(x, dtype=torch.float),
         edge_index=torch.tensor(edge_index, dtype=torch.long).t().contiguous(),
-        y=torch.tensor(y[indices], dtype=torch.int),
+        y=torch.tensor(y[indices], dtype=torch.int64),
         MD0=torch.tensor(MD0, dtype=torch.float),
         MD1=torch.tensor(MD1, dtype=torch.float),
         MD2=torch.tensor(MD2, dtype=torch.float),
@@ -246,6 +252,7 @@ if __name__ == '__main__':
         y_range=100,
         pre_filter=pre_filter)
     print(len(dataset))
+    print(dataset[0])
     # loader = DataLoader(dataset, batch_size=32, shuffle=True)
     # for batch in loader:
     #     pass
