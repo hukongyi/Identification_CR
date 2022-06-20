@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-20 14:40:46
+# Last Modified: 2022-06-20 15:03:36
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -37,7 +37,7 @@ def train(train_loader, model, optimizer, device):
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, data.pri_id)
+        loss = F.nll_loss(output, data.pri_id.to(torch.int64))
         loss.backward()
         optimizer.step()
 
@@ -117,8 +117,8 @@ if __name__ == '__main__':
         pre_filter=pre_filter)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_index, test_index = train_test_split(list(range(len(dataset))), test_size=0.1)
-    train_dataset = dataset[train_index.tolist()]
-    test_dataset = dataset[test_index.tolist()]
+    train_dataset = dataset[train_index]
+    test_dataset = dataset[test_index]
     batch_size = 1024
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     start_lr = 0.001
 
-    model = GIN(dataset, layers, hidden)
+    model = GIN(dataset, layers, hidden).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',

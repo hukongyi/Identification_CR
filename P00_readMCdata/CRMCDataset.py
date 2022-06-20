@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-20 13:51:57
+# Last Modified: 2022-06-20 14:58:55
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -139,6 +139,7 @@ class CRMCDataset(Dataset):
                     pri_e=pri_e,
                     pri_ne=pri_ne,
                     pri_sump=pri_sump,
+                    y=pri_id,
                 )
                 if self.pre_filter(data, self.nchmin, self.x_range, self.y_range):
                     torch.save(data, osp.join(self.processed_dir, f'data_{self.number}.pt'))
@@ -170,7 +171,7 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
                                loc_x: np.ndarray, loc_y: np.ndarray, loc_z: np.ndarray,
                                pri_id: np.ndarray, pri_theta: np.ndarray, pri_phi: np.ndarray,
                                pri_core_x: np.ndarray, pri_core_y: np.ndarray, pri_e: np.ndarray,
-                               pri_ne: np.ndarray, pri_sump: np.ndarray) -> Data:
+                               pri_ne: np.ndarray, pri_sump: np.ndarray, y: np.ndarray) -> Data:
     x = list()
     edge_index = list()
     if indices < len(Tibetevent):
@@ -217,6 +218,7 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
     data = Data(
         x=torch.tensor(x, dtype=torch.float),
         edge_index=torch.tensor(edge_index, dtype=torch.long).t().contiguous(),
+        y=torch.tensor(y[indices], dtype=torch.int),
         MD0=torch.tensor(MD0, dtype=torch.float),
         MD1=torch.tensor(MD1, dtype=torch.float),
         MD2=torch.tensor(MD2, dtype=torch.float),
