@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-20 13:51:57
+# Last Modified: 2022-06-20 13:50:04
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -243,7 +243,4 @@ if __name__ == '__main__':
         x_range=100,
         y_range=100,
         pre_filter=pre_filter)
-    print(len(dataset))
-    # loader = DataLoader(dataset, batch_size=32, shuffle=True)
-    # for batch in loader:
-    #     pass
+    print(dataset.num_features)
