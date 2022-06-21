@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 15:18:53
+# Last Modified: 2022-06-21 16:00:13
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -218,12 +218,13 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
     for i in data_range_MD:
         MD_tmp[int(i[1])] = i[2]
     MD_tmp = MD_tmp.reshape(4, 4, 4, 4)
+    MD_new = np.zeros([])
 
     data = Data(
         x=torch.tensor(x, dtype=torch.float),
         edge_index=torch.tensor(edge_index, dtype=torch.long).t().contiguous(),
         y=torch.tensor([y[indices]], dtype=torch.int64),
-        MD=torch.tensor(MD_tmp[:, :, :, 0], dtype=torch.float),
+        # MD=torch.tensor(MD_tmp[:, :, :, 0], dtype=torch.float),
         # MD0=torch.tensor(MD0, dtype=torch.float),
         # MD1=torch.tensor(MD1, dtype=torch.float),
         # MD2=torch.tensor(MD2, dtype=torch.float),
