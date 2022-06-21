@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 18:56:26
+# Last Modified: 2022-06-21 19:02:02
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -57,12 +57,12 @@ def test(loader, model, device):
         pred = output.max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
         for i in range(3):
-            tmp = pred[torch.where(data.y == i)]
-            TP[i] += len(tmp[tmp == i])
-            FN[i] += len(tmp[tmp != i])
-            tmp = pred[torch.where(data.y != i)]
-            FP[i] += len(tmp[tmp == i])
-            TN[i] += len(tmp[tmp != i])
+            tmp_T = pred[torch.where(data.y == i)]
+            TP[i] += len(tmp_T[tmp_T == i])
+            FN[i] += len(tmp_T[tmp_T != i])
+            tmp_F = pred[torch.where(data.y != i)]
+            FP[i] += len(tmp_F[tmp_F == i])
+            TN[i] += len(tmp_F[tmp_F != i])
     name_list = ['H+He', 'other', 'Fe']
     for i in range(3):
         print(name_list[i])
