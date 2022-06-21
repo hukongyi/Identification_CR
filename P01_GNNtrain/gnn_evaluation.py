@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-20 15:03:36
+# Last Modified: 2022-06-20 18:29:53
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -37,7 +37,7 @@ def train(train_loader, model, optimizer, device):
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, data.pri_id.to(torch.int64))
+        loss = F.nll_loss(output, data.y)
         loss.backward()
         optimizer.step()
 
@@ -56,10 +56,10 @@ def test(loader, model, device):
 
 
 # Taken from https://github.com/rusty1s/pytorch_geometric/blob/master/benchmark/kernel/gin.py.
-class GIN(torch.nn.Module):
+class GIN_CNN(torch.nn.Module):
 
     def __init__(self, dataset, num_layers, hidden):
-        super(GIN, self).__init__()
+        super(GIN_CNN, self).__init__()
         self.conv1 = GINConv(Sequential(
             Linear(dataset.num_features, hidden),
             ReLU(),
@@ -80,7 +80,7 @@ class GIN(torch.nn.Module):
                 ),
                         train_eps=True))
         self.lin1 = Linear(hidden, hidden)
-        self.lin2 = Linear(hidden, len(dataset[0].pri_id))
+        self.lin2 = Linear(hidden, dataset.num_classes)
 
     def reset_parameters(self):
         self.conv1.reset_parameters()
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     start_lr = 0.001
 
-    model = GIN(dataset, layers, hidden).to(device)
+    model = GIN_CNN(dataset, layers, hidden).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',
@@ -135,7 +135,7 @@ if __name__ == '__main__':
                                                            patience=5,
                                                            min_lr=0.0000001)
 
-    for epoch in range(1, 200 + 1):
+    for epoch in range(1, 1 + 1):
         lr = scheduler.optimizer.param_groups[0]['lr']
         train(train_loader, model, optimizer, device)
         test_acc = test(test_loader, model, device)

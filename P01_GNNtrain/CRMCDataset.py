@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 15:18:53
+# Last Modified: 2022-06-20 16:13:32
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -45,8 +45,6 @@ class CRMCDataset(Dataset):
         self.calibfile = calibfile
         self.x_range = x_range
         self.y_range = y_range
-
-        self.num_classes = 3
         data_number_path = osp.join(self.processed_dir, 'data_number')
         if not osp.exists(data_number_path):
             self.number = 0
@@ -114,7 +112,7 @@ class CRMCDataset(Dataset):
 
         particle_id = list(set(pri_id))
         particle_id.sort()
-        pri_kind = np.zeros(len(pri_id), dtype=int)
+        pri_kind = np.zeros(len(pri_id), dtype=np.int)
         for j, i in enumerate(particle_id):
             if j == 0 or j == 1:
                 pri_kind[pri_id == i] = 0
@@ -217,25 +215,28 @@ def get_one_trigger_from_numpy(indices: int, Tibetevent: np.ndarray, Tibet: np.n
     MD_tmp = np.zeros([4 * 16 * 4])
     for i in data_range_MD:
         MD_tmp[int(i[1])] = i[2]
-    MD_tmp = MD_tmp.reshape(4, 4, 4, 4)
+    MD_tmp = MD_tmp.reshape(4, 16, 4)
+    MD0 = MD_tmp[0, :, 0].reshape(4, 4)
+    MD1 = MD_tmp[1, :, 0].reshape(4, 4)
+    MD2 = MD_tmp[2, :, 0].reshape(4, 4)
+    MD3 = MD_tmp[3, :, 0].reshape(4, 4)
 
     data = Data(
         x=torch.tensor(x, dtype=torch.float),
         edge_index=torch.tensor(edge_index, dtype=torch.long).t().contiguous(),
-        y=torch.tensor([y[indices]], dtype=torch.int64),
-        MD=torch.tensor(MD_tmp[:, :, :, 0], dtype=torch.float),
-        # MD0=torch.tensor(MD0, dtype=torch.float),
-        # MD1=torch.tensor(MD1, dtype=torch.float),
-        # MD2=torch.tensor(MD2, dtype=torch.float),
-        # MD3=torch.tensor(MD3, dtype=torch.float),
-        pri_id=torch.tensor([pri_id[indices]], dtype=torch.int),
-        pri_theta=torch.tensor([pri_theta[indices]], dtype=torch.float),
-        pri_phi=torch.tensor([pri_phi[indices]], dtype=torch.float),
-        pri_core_x=torch.tensor([pri_core_x[indices]], dtype=torch.float),
-        pri_core_y=torch.tensor([pri_core_y[indices]], dtype=torch.float),
-        pri_e=torch.tensor([pri_e[indices]], dtype=torch.float),
-        pri_ne=torch.tensor([pri_ne[indices]], dtype=torch.float),
-        pri_sump=torch.tensor([pri_sump[indices]], dtype=torch.float),
+        y=torch.tensor(y[indices], dtype=torch.int64),
+        MD0=torch.tensor(MD0, dtype=torch.float),
+        MD1=torch.tensor(MD1, dtype=torch.float),
+        MD2=torch.tensor(MD2, dtype=torch.float),
+        MD3=torch.tensor(MD3, dtype=torch.float),
+        pri_id=torch.tensor(pri_id[indices], dtype=torch.int),
+        pri_theta=torch.tensor(pri_theta[indices], dtype=torch.float),
+        pri_phi=torch.tensor(pri_phi[indices], dtype=torch.float),
+        pri_core_x=torch.tensor(pri_core_x[indices], dtype=torch.float),
+        pri_core_y=torch.tensor(pri_core_y[indices], dtype=torch.float),
+        pri_e=torch.tensor(pri_e[indices], dtype=torch.float),
+        pri_ne=torch.tensor(pri_ne[indices], dtype=torch.float),
+        pri_sump=torch.tensor(pri_sump[indices], dtype=torch.float),
     )
 
     return data
@@ -250,9 +251,8 @@ if __name__ == '__main__':
         x_range=100,
         y_range=100,
         pre_filter=pre_filter)
-    # print(len(dataset))
+    print(len(dataset))
     print(dataset[0])
-    print(dataset.num_classes)
     # loader = DataLoader(dataset, batch_size=32, shuffle=True)
     # for batch in loader:
     #     pass
