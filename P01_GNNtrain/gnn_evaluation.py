@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 20:53:32
+# Last Modified: 2022-06-22 20:27:10
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -15,15 +15,21 @@
 # ----------	--------	----------------------------------------------------
 # 2022-06-20	K.Y.Hu		create this file
 ###
-from CRMCDataset import CRMCDataset, pre_filter
+from curses import echo
+import os
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Conv2d, MaxPool2d, Sequential, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import GINConv, global_mean_pool
 from sklearn.model_selection import train_test_split
 from torch_geometric.loader import DataLoader
+
+from CRMCDataset import CRMCDataset, pre_filter
+
+particle_list = ['H', 'He', 'C', 'Mg', 'Cl', 'Fe']
 
 
 # One training epoch for GNN model.
@@ -37,37 +43,87 @@ def train(train_loader, model, optimizer, device):
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, data.y)
+        loss = F.nll_loss(
+            output,
+            data.y,
+            weight=torch.Tensor([0.008, 0.015, 0.073, 0.206, 1, 0.308]),
+        )
         loss.backward()
         optimizer.step()
 
 
 # Get acc. of GNN model.
-def test(loader, model, device):
+def test(loader, model, device, epoch):
     model.eval()
-
+    output_logsoftmax = list()
+    label = list()
     correct = 0
-    TP = np.zeros(3)
-    FP = np.zeros(3)
-    FN = np.zeros(3)
-    TN = np.zeros(3)
+    ConfusionMatrix = np.zeros([6, 6])
+    count = 0
     for data in loader:
+        count += 1
+        print(count)
         data = data.to(device)
         output = model(data)
+        output_logsoftmax.append(output.cpu().detach().numpy())
+        label.append(data.y.numpy())
         pred = output.max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
-        for i in range(3):
+
+        for i in range(6):
             tmp_T = pred[torch.where(data.y == i)]
-            TP[i] += len(tmp_T[tmp_T == i])
-            FN[i] += len(tmp_T[tmp_T != i])
-            tmp_F = pred[torch.where(data.y != i)]
-            FP[i] += len(tmp_F[tmp_F == i])
-            TN[i] += len(tmp_F[tmp_F != i])
-    name_list = ['H+He', 'other', 'Fe']
-    for i in range(3):
-        print(name_list[i])
-        print(f'{TP[i]}\t{FP[i]}\n{FN[i]}\t{TN[i]}')
-    return correct / len(loader.dataset)
+            for j in range(6):
+                ConfusionMatrix[j, i] += len(tmp_T[tmp_T == j])
+
+    F1_score = getF1_score(ConfusionMatrix)
+    output_logsoftmax = np.concatenate(output_logsoftmax)
+    output_softmax = np.exp(output_logsoftmax)
+    label = np.concatenate(label)
+    drawpath = f'./train{epoch}/'
+    draw_ROC_classification(drawpath, output_softmax, label)
+    return np.mean(F1_score)
+
+
+def getF1_score(ConfusionMatrix):
+    Precission = np.zeros(6)
+    Recall = np.zeros(6)
+    for i in range(6):
+        Precission[i] = ConfusionMatrix[i, i] / np.sum(ConfusionMatrix[i, :])
+        Recall[i] = ConfusionMatrix[i, i] / np.sum(ConfusionMatrix[:, i])
+    F1_score = 2 * Precission * Recall / (Precission + Recall)
+    return F1_score
+
+
+def draw_ROC_classification(drawpath, output_softmax, label):
+    if not os.path.exists(drawpath):
+        os.makedirs(drawpath)
+    for i, particle_name in enumerate(particle_list):
+        plt.figure(figsize=(16, 16))
+
+        Tr = output_softmax[np.where(label == i), i][0]
+        Fa = output_softmax[np.where(label != i), i][0]
+        plt.hist(Tr, bins=20, range=(0, 1), density=True, color='r', alpha=0.5)
+        plt.hist(Fa, bins=20, range=(0, 1), density=True, color='b', alpha=0.5)
+        plt.title(f'{particle_name}')
+        plt.savefig(drawpath + particle_name + '_classification.png')
+        plt.close()
+
+        plt.figure(figsize=(16, 16))
+        TPR = list()
+        FPR = list()
+        T = np.arange(0, 1 + 0.01, 0.01)
+        for T_this in T:
+            TP = np.sum([output_softmax[np.where(label == i), i][0] > T_this])
+            TPR.append(TP / np.sum(label == i))
+            FP = np.sum([output_softmax[np.where(label != i), i][0] > T_this])
+            FPR.append(FP / np.sum(output_softmax[:, i] < T_this))
+
+        plt.plot(TPR, FPR)
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)
+        plt.title(f'{particle_name}_ROC')
+        plt.savefig(drawpath + particle_name + '_ROC.png')
+        plt.close()
 
 
 # Taken from https://github.com/rusty1s/pytorch_geometric/blob/master/benchmark/kernel/gin.py.
@@ -106,7 +162,7 @@ class GIN_CNN(torch.nn.Module):
         self.conv2_cnn = Conv2d(6, 16, kernel_size=5)
         self.mp = MaxPool2d(2)
         self.relu = ReLU()
-        self.fc1 = Linear(16 * 2 * 2, 64)  # 必须为16*5*5
+        self.fc1 = Linear(16 * 2 * 2, 64)  # 根据图像大小选择
 
     def reset_parameters(self):
         self.conv1.reset_parameters()
@@ -155,12 +211,24 @@ if __name__ == '__main__':
     print(len(dataset))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-    train_index, test_index = train_test_split(list(range(len(dataset))), test_size=0.1)
+    train_index, test_index = train_test_split(
+        list(range(len(dataset))),
+        test_size=0.1,
+        random_state=1,
+    )
     train_dataset = dataset[train_index]
     test_dataset = dataset[test_index]
     batch_size = 1024
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
     layers = 3
     hidden = 64
 
@@ -168,15 +236,21 @@ if __name__ == '__main__':
 
     model = GIN_CNN(dataset, layers, hidden).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                           mode='max',
-                                                           factor=0.5,
-                                                           patience=5,
-                                                           min_lr=0.0000001)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='max',
+        factor=0.5,
+        patience=5,
+        min_lr=0.0000001,
+    )
 
-    for epoch in range(1, 1 + 1):
+    for epoch in range(1, 10 + 1):
         lr = scheduler.optimizer.param_groups[0]['lr']
         train(train_loader, model, optimizer, device)
-        test_acc = test(test_loader, model, device)
-        scheduler.step(test_acc)
-        print('all_acc:', test_acc)
+        F1_score = test(test_loader, model, device, epoch)
+        scheduler.step(F1_score)
+        print(f'{epoch} F1_score:{F1_score}')
+        torch.save(
+            model.state_dict(),
+            f'/home/hky/github/Identification_CR/P01_GNNtrain/train{epoch}/train{epoch}.pth',
+        )

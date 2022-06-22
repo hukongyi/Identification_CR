@@ -7,12 +7,13 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 19:36:49
+# Last Modified: 2022-06-22 15:38:13
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
 # Date      	By      	Comments
 # ----------	--------	----------------------------------------------------
+# 2022-06-22	K.Y.Hu		add number of class
 # 2022-06-19	K.Y.Hu		realize should not use InMemoryDataset
 # 2022-06-16	K.Y.Hu		Create this file
 ###
@@ -46,7 +47,7 @@ class CRMCDataset(Dataset):
         self.x_range = x_range
         self.y_range = y_range
 
-        self.num_classes = 3
+        self.num_classes = 6
         data_number_path = osp.join(self.processed_dir, 'data_number')
         if not osp.exists(data_number_path):
             self.number = 0
@@ -66,7 +67,7 @@ class CRMCDataset(Dataset):
     def processed_dir(self) -> str:
         return osp.join(
             self.root,
-            f'processed_kneighbors_{self.kneighbors}_nchmin_{self.nchmin}_{self.x_range}_{self.y_range}'
+            f'processed_class_{self.num_classes}_kneighbors_{self.kneighbors}_nchmin_{self.nchmin}_{self.x_range}_{self.y_range}'
         )
 
     @property
@@ -116,16 +117,21 @@ class CRMCDataset(Dataset):
         particle_id.sort()
         pri_kind = np.zeros(len(pri_id), dtype=int)
         for j, i in enumerate(particle_id):
-            if j == 0 or j == 1:
+            if j == 0:
                 pri_kind[pri_id == i] = 0
-            elif j == 11:
-                pri_kind[pri_id == i] = 2
-            else:
+            elif j == 1:
                 pri_kind[pri_id == i] = 1
+            elif j == 2 or j == 3 or j == 4:
+                pri_kind[pri_id == i] = 2
+            elif j == 5 or j == 6 or j == 7:
+                pri_kind[pri_id == i] = 3
+            elif j == 8 or j == 9 or j == 10:
+                pri_kind[pri_id == i] = 4
+            elif j == 11:
+                pri_kind[pri_id == i] = 5
 
-        print(len(pri_kind[pri_kind == 0]))
-        print(len(pri_kind[pri_kind == 1]))
-        print(len(pri_kind[pri_kind == 2]))
+        for i in range(self.num_classes):
+            print(i, len(pri_kind[pri_kind == i]))
 
         for i in tqdm(range(len(pri_id))):
             if pri_n_hit[i] >= self.nchmin:
