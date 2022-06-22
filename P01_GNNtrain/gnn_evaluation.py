@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-22 20:27:10
+# Last Modified: 2022-06-22 20:28:33
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -79,7 +79,7 @@ def test(loader, model, device, epoch):
     output_logsoftmax = np.concatenate(output_logsoftmax)
     output_softmax = np.exp(output_logsoftmax)
     label = np.concatenate(label)
-    drawpath = f'./train{epoch}/'
+    drawpath = f'/home/hky/github/Identification_CR/P01_GNNtrain/train{epoch}/'
     draw_ROC_classification(drawpath, output_softmax, label)
     return np.mean(F1_score)
 
