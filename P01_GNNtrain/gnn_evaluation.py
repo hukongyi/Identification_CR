@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-22 20:28:33
+# Last Modified: 2022-06-22 20:46:53
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -223,11 +223,13 @@ if __name__ == '__main__':
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
+        num_workers=10,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=True,
+        num_workers=10,
     )
     layers = 3
     hidden = 64
