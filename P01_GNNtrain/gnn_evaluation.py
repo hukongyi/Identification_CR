@@ -7,7 +7,7 @@
 # Author: Hu Kongyi
 # Email:hukongyi@ihep.ac.cn
 # -----
-# Last Modified: 2022-06-21 19:02:02
+# Last Modified: 2022-06-21 20:53:32
 # Modified By: Hu Kongyi
 # -----
 # HISTORY:
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     model = GIN_CNN(dataset, layers, hidden).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                           mode='min',
+                                                           mode='max',
                                                            factor=0.5,
                                                            patience=5,
                                                            min_lr=0.0000001)
